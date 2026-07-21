@@ -1,0 +1,11 @@
+{
+  "_note": "Скопируйте в config.test.json и укажите свой локальный Vision-провайдер (Ollama). Реальный config.test.json в публичный снимок не входит.",
+  "ExePath": "..\\publish\\Kostyor.exe",
+  "VisionProviders": [
+    {
+      "BaseUrl": "http://127.0.0.1:11434/v1/chat/completions",
+      "ApiKey": "ollama",
+      "VisionModel": "qwen2.5vl:7b"
+    }
+  ]
+}

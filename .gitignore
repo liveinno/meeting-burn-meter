@@ -1,0 +1,44 @@
+# --- .NET / сборка ---
+bin/
+obj/
+publish/
+*.user
+*.suo
+.vs/
+[Dd]ebug/
+[Rr]elease/
+artifacts/
+
+# --- Установщик ---
+installer/Output/
+*.msi
+Setup*.exe
+
+# --- Секреты / приватное (см. AGENTS.md §11) ---
+.env
+*.env
+!*.env.example
+AGENTS.local.md
+
+# --- Пользовательские данные приложения ---
+config.json
+history.db
+*.db-wal
+*.db-shm
+
+# --- Автотестер ---
+report.html
+Kostyor.UITests/report.html
+**/config.test.json.local
+
+# --- Модели / крупные бинарники ---
+*.gguf
+models/
+
+# --- ОС ---
+Thumbs.db
+Desktop.ini
+
+# --- Экспорт дизайна (эталон — только Костёр.dc.html в корне) ---
+design_export/
+*.zip

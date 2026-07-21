@@ -1,0 +1,26 @@
+* text=auto
+
+*.cs      text
+*.xaml    text
+*.csproj  text
+*.sln     text eol=crlf
+*.json    text
+*.md      text
+*.iss     text working-tree-encoding=UTF-8
+*.sh      text eol=lf
+
+*.png  binary
+*.jpg  binary
+*.ico  binary
+*.gguf binary
+*.msi  binary
+*.exe  binary
+*.pdf  binary
+*.docx binary
+
+# GitHub Linguist: не считать за «язык проекта» референс-макеты дизайна и авто-отчёты
+# (даже если случайно попадут в снимок) — основной язык репозитория должен быть C#.
+docs/design/**   linguist-vendored
+*.dc.html        linguist-vendored
+report.html      linguist-generated
+*.html           linguist-documentation
