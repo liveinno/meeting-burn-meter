@@ -1,0 +1,181 @@
+<Window x:Class="Kostyor.App.Views.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Настройки — Костёр"
+        WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="True" AllowsTransparency="True"
+        Width="392" Height="592" WindowStartupLocation="CenterScreen"
+        Background="Transparent" FontFamily="{StaticResource SansFont}" UseLayoutRounding="True">
+
+    <Window.Resources>
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#cbd5e1"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+    </Window.Resources>
+
+    <Border Margin="16">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="40" ShadowDepth="14" Direction="270" Opacity="0.5" Color="Black"/>
+        </Border.Effect>
+        <Border CornerRadius="18" Background="#141820" BorderBrush="#2a3140" BorderThickness="1">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Заголовок -->
+                <Border Grid.Row="0" CornerRadius="17,17,0,0" Background="#1a2130" MouseLeftButtonDown="Header_Drag">
+                    <Grid>
+                        <TextBlock Text="Настройки" FontWeight="Bold" FontSize="15" Foreground="#f1f5f9" Margin="20,12"/>
+                        <TextBlock Text="сохраняется автоматически" HorizontalAlignment="Right" Margin="0,0,52,0"
+                                   Foreground="#6ee7b7" FontSize="11" Opacity="0.8"/>
+                        <Button Content="✕" HorizontalAlignment="Right" Width="42" Height="42" Foreground="#94a3b8"
+                                Background="Transparent" BorderThickness="0" Cursor="Hand" FontSize="14" Click="Close_Click"/>
+                    </Grid>
+                </Border>
+
+                <!-- Прокручиваемое тело -->
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="20,14,10,10">
+                    <StackPanel Margin="0,0,8,0">
+                        <Grid Margin="0,0,0,9">
+                            <TextBlock Text="Overhead (полная нагрузка)"/>
+                            <TextBlock Text="{Binding Overhead, StringFormat={}{0:0.0}×}" HorizontalAlignment="Right" Foreground="#6ee7b7" FontWeight="Bold"/>
+                        </Grid>
+                        <Slider Minimum="1" Maximum="2.5" TickFrequency="0.1" IsSnapToTickEnabled="True" Value="{Binding Overhead}" Margin="0,0,0,4"/>
+                        <TextBlock Text="1.0 = оклад · 1.3–2.3 = стоимость для компании" Foreground="#8a93a3" FontSize="11" Margin="0,0,0,15"/>
+
+                        <Grid Margin="0,0,0,9">
+                            <TextBlock Text="Заполнение кольца, мин"/>
+                            <TextBlock Text="{Binding FillMinutes}" HorizontalAlignment="Right" Foreground="#6ee7b7" FontWeight="Bold"/>
+                        </Grid>
+                        <Slider Minimum="10" Maximum="120" TickFrequency="5" IsSnapToTickEnabled="True" Value="{Binding FillMinutes}" Margin="0,0,0,16"/>
+
+                        <TextBlock Text="Пороги цвета кольца, мин (зелёный → жёлтый → оранжевый → красный)" TextWrapping="Wrap" Margin="0,0,0,7"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                            <TextBox Width="66" FontSize="16" Padding="10,8" TextAlignment="Center" Text="{Binding Threshold1}"/>
+                            <TextBox Width="66" FontSize="16" Padding="10,8" TextAlignment="Center" Text="{Binding Threshold2}" Margin="8,0,0,0"/>
+                            <TextBox Width="66" FontSize="16" Padding="10,8" TextAlignment="Center" Text="{Binding Threshold3}" Margin="8,0,0,0"/>
+                        </StackPanel>
+
+                        <TextBlock Text="Вехи-нотификации (₽, через запятую)" Margin="0,0,0,7"/>
+                        <TextBox Text="{Binding MilestonesText}" Margin="0,0,0,16"/>
+
+                        <TextBlock Text="Часов в месяце (для «оклад → ставка»)" Margin="0,0,0,7"/>
+                        <TextBox Width="100" HorizontalAlignment="Left" Text="{Binding SalaryHoursPerMonth}" Margin="0,0,0,16"/>
+
+                        <Border Background="#0DFFFFFF" CornerRadius="12" Padding="12" Margin="0,0,0,16">
+                            <StackPanel>
+                                <TextBlock Text="Помощник: оклад/мес → ставка/час" FontWeight="Bold" Foreground="#e8edf3" Margin="0,0,0,8"/>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBox Width="120" Text="{Binding SalaryInput, UpdateSourceTrigger=PropertyChanged}"/>
+                                    <TextBlock Text="₽/мес =" Margin="8,0,8,0"/>
+                                    <TextBlock Text="{Binding SalaryResultText}" Foreground="#6ee7b7" FontWeight="Bold"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Эквиваленты «сожгли, как…» — цены настраивает пользователь (0 — скрыть) -->
+                        <Border Background="#0DFFFFFF" CornerRadius="12" Padding="12" Margin="0,0,0,16">
+                            <StackPanel>
+                                <TextBlock Text="Эквиваленты «сожгли, как…»" FontWeight="Bold" Foreground="#e8edf3" Margin="0,0,0,10"/>
+                                <Grid Margin="0,0,0,8">
+                                    <TextBlock Text="Чашка кофе, ₽"/>
+                                    <TextBox Width="86" HorizontalAlignment="Right" Text="{Binding CoffeePrice}"/>
+                                </Grid>
+                                <Grid Margin="0,0,0,8">
+                                    <TextBlock Text="Пицца на команду, ₽"/>
+                                    <TextBox Width="86" HorizontalAlignment="Right" Text="{Binding PizzaPrice}"/>
+                                </Grid>
+                                <Grid Margin="0,0,0,8">
+                                    <TextBlock Text="Смартфон, ₽"/>
+                                    <TextBox Width="86" HorizontalAlignment="Right" Text="{Binding SmartphonePrice}"/>
+                                </Grid>
+                                <Grid Margin="0,0,0,8">
+                                    <TextBlock Text="Ноутбук (MacBook), ₽"/>
+                                    <TextBox Width="86" HorizontalAlignment="Right" Text="{Binding LaptopPrice}"/>
+                                </Grid>
+                                <Grid Margin="0,0,0,4">
+                                    <TextBlock Text="Час по МРОТ, ₽"/>
+                                    <TextBox Width="86" HorizontalAlignment="Right" Text="{Binding MrotHourly}"/>
+                                </Grid>
+                                <TextBlock Text="0 — скрыть эквивалент" Foreground="#8a93a3" FontSize="11"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Курс валют — задаёт пользователь (локально, без сети) -->
+                        <Border Background="#0DFFFFFF" CornerRadius="12" Padding="12" Margin="0,0,0,16">
+                            <StackPanel>
+                                <TextBlock Text="Курс валют" FontWeight="Bold" Foreground="#e8edf3" Margin="0,0,0,8"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                                        <TextBlock Text="1 $ =" Foreground="#8a93a3" FontSize="11" Margin="0,0,0,3"/>
+                                        <TextBox Text="{Binding ManualUsd}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Margin="3,0,3,0">
+                                        <TextBlock Text="1 € =" Foreground="#8a93a3" FontSize="11" Margin="0,0,0,3"/>
+                                        <TextBox Text="{Binding ManualEur}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Margin="6,0,0,0">
+                                        <TextBlock Text="1 ¥ =" Foreground="#8a93a3" FontSize="11" Margin="0,0,0,3"/>
+                                        <TextBox Text="{Binding ManualCny}"/>
+                                    </StackPanel>
+                                </Grid>
+                                <TextBlock Text="₽ за единицу. Курс задаёшь сам — приложение не ходит в сеть." Foreground="#8a93a3" FontSize="11" Margin="0,8,0,0"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Огонь в кольце (design v2): фазы по сожжённой сумме -->
+                        <Border Background="#0DFFFFFF" CornerRadius="12" Padding="12" Margin="0,0,0,16">
+                            <StackPanel>
+                                <TextBlock Text="Огонь в кольце" FontWeight="Bold" Foreground="#e8edf3" Margin="0,0,0,8"/>
+                                <CheckBox Content="Показывать огонь в кольце" IsChecked="{Binding FireEnabled}" Margin="0,0,0,8"/>
+                                <Grid IsEnabled="{Binding FireEnabled}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                                        <TextBlock Text="Жёлтый, ₽" Foreground="#8a93a3" FontSize="11" Margin="0,0,0,3"/>
+                                        <TextBox Text="{Binding FireYellowRub}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Margin="3,0,3,0">
+                                        <TextBlock Text="Оранжевый, ₽" Foreground="#8a93a3" FontSize="11" Margin="0,0,0,3"/>
+                                        <TextBox Text="{Binding FireOrangeRub}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Margin="6,0,0,0">
+                                        <TextBlock Text="Красный, ₽" Foreground="#8a93a3" FontSize="11" Margin="0,0,0,3"/>
+                                        <TextBox Text="{Binding FireRedRub}"/>
+                                    </StackPanel>
+                                </Grid>
+                                <TextBlock Text="Огонь разгорается по мере роста суммы: жёлтый → оранжевый → красный." Foreground="#8a93a3" FontSize="11" Margin="0,8,0,0"/>
+                            </StackPanel>
+                        </Border>
+
+                        <CheckBox Content="Показывать конвертацию валют" IsChecked="{Binding ShowConversion}"/>
+                        <CheckBox Content="Пульсация в красной зоне" IsChecked="{Binding PulseAtRed}"/>
+                        <CheckBox Content="Показывать живые эквиваленты" IsChecked="{Binding ShowEquivalents}"/>
+                        <CheckBox Content="Автозапуск при входе в Windows" IsChecked="{Binding Autostart}"/>
+                        <CheckBox Content="Сквозные клики (click-through)" IsChecked="{Binding ClickThrough}"/>
+                        <CheckBox Content="Стартовать свёрнутым в трей" IsChecked="{Binding StartMinimized}"/>
+
+                        <TextBlock Text="{Binding HotkeysText}" Foreground="#8a93a3" FontSize="12" Margin="0,14,0,4"/>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- Нижняя панель -->
+                <Border Grid.Row="2" CornerRadius="0,0,17,17" Background="#161c27" BorderBrush="#242b38" BorderThickness="0,1,0,0" Padding="20,12">
+                    <Button Style="{StaticResource PrimaryButton}" Content="Готово" Height="40" Click="Save_Click"/>
+                </Border>
+            </Grid>
+        </Border>
+    </Border>
+</Window>

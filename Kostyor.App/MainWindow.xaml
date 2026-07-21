@@ -1,0 +1,345 @@
+<Window x:Class="Kostyor.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:Kostyor.App.ViewModels"
+        xmlns:ctrl="clr-namespace:Kostyor.App.Controls"
+        Title="Костёр"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        ResizeMode="NoResize" Topmost="True" ShowInTaskbar="False"
+        SizeToContent="WidthAndHeight" WindowStartupLocation="CenterScreen"
+        FontFamily="{StaticResource SansFont}" TextOptions.TextFormattingMode="Ideal"
+        UseLayoutRounding="True" SnapsToDevicePixels="True">
+
+    <Grid x:Name="Root" Background="{x:Null}">
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+            <StackPanel.LayoutTransform>
+                <!-- Масштаб UI: дизайн в 420-координатах, рендер в масштабе. Пользователь меняет его,
+                     растягивая круг за обод (MainWindow.xaml.cs); значение сохраняется в конфиг. -->
+                <ScaleTransform x:Name="UiScaleTransform" ScaleX="0.6" ScaleY="0.6"/>
+            </StackPanel.LayoutTransform>
+
+            <!-- ============ Круг счётчика ============ -->
+            <Grid Margin="30">
+
+                <!-- ПОЛНЫЙ круг (420) -->
+                <Border x:Name="CircleBorder" Width="420" Height="420" CornerRadius="210"
+                        Background="{StaticResource CircleBg}"
+                        BorderBrush="#0FFFFFFF" BorderThickness="1"
+                        Visibility="{Binding NotCompact, Converter={StaticResource BoolToVis}}"
+                        MouseLeftButtonDown="Circle_MouseLeftButtonDown"
+                        MouseMove="Border_MouseMove" MouseLeftButtonUp="Border_MouseLeftButtonUp">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="42" ShadowDepth="18" Direction="270" Opacity="0.55" Color="Black"/>
+                    </Border.Effect>
+                    <Border.Clip>
+                        <EllipseGeometry Center="210,210" RadiusX="210" RadiusY="210"/>
+                    </Border.Clip>
+
+                    <Grid Width="420" Height="420">
+
+                        <!-- Внутреннее свечение (пульс в красной зоне) -->
+                        <Ellipse x:Name="Glow" Margin="14" Stroke="{Binding RingBrush}" StrokeThickness="10"
+                                 Opacity="0.22" RenderTransformOrigin="0.5,0.5">
+                            <Ellipse.Effect>
+                                <BlurEffect Radius="18"/>
+                            </Ellipse.Effect>
+                            <Ellipse.RenderTransform>
+                                <ScaleTransform ScaleX="1" ScaleY="1"/>
+                            </Ellipse.RenderTransform>
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsRed}" Value="True">
+                                            <DataTrigger.EnterActions>
+                                                <BeginStoryboard Name="Pulse">
+                                                    <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                         From="0.28" To="0.85" Duration="0:0:0.55"/>
+                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                                                         From="1" To="1.02" Duration="0:0:0.55"/>
+                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
+                                                                         From="1" To="1.02" Duration="0:0:0.55"/>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </DataTrigger.EnterActions>
+                                            <DataTrigger.ExitActions>
+                                                <StopStoryboard BeginStoryboardName="Pulse"/>
+                                            </DataTrigger.ExitActions>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+
+                        <!-- Огонь в кольце (design v2): фазы по деньгам/времени, поверх свечения, под кольцом и текстом -->
+                        <ctrl:FireControl Phase="{Binding FirePhase}" Active="{Binding FireActive}" ShowScrim="True"
+                                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
+
+                        <!-- Кольцо-прогресс: трек + дуга (координаты 0..420) -->
+                        <Ellipse Width="396" Height="396" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                 Stroke="#12FFFFFF" StrokeThickness="7"/>
+                        <Path x:Name="ProgressPath"
+                              Data="{Binding ProgressGeometry}"
+                              Stroke="{Binding RingBrush}" StrokeThickness="7"
+                              StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                              HorizontalAlignment="Left" VerticalAlignment="Top"
+                              AutomationProperties.AutomationId="ProgressRing"/>
+
+                        <!-- Центр: время / сумма / конвертация / скорость -->
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,30">
+                            <TextBlock x:Name="TimeText" Text="{Binding TimeText}"
+                                       FontFamily="{StaticResource MonoFont}" FontWeight="Medium" FontSize="34"
+                                       Foreground="{StaticResource TimeBrush}" TextAlignment="Center"
+                                       Cursor="Hand" ToolTip="Свернуть в компакт-режим"
+                                       MouseLeftButtonDown="TimeText_MouseLeftButtonDown"
+                                       AutomationProperties.AutomationId="Timer"/>
+
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,8,0,0">
+                                <ctrl:Odometer x:Name="AmountOdometer" Text="{Binding AmountText}"
+                                               FontFamily="{StaticResource MonoFont}" FontWeight="Bold" FontSize="60"
+                                               Foreground="{StaticResource AmountBrush}" VerticalAlignment="Bottom"
+                                               AutomationProperties.AutomationId="AmountRub"
+                                               AutomationProperties.Name="{Binding AmountText}"/>
+                                <TextBlock Text="₽" FontFamily="{StaticResource MonoFont}" FontSize="30"
+                                           Foreground="{StaticResource SecondaryBrush}"
+                                           VerticalAlignment="Bottom" Margin="6,0,0,8"/>
+                            </StackPanel>
+
+                            <TextBlock Text="{Binding ConversionText}" FontSize="16" FontWeight="SemiBold"
+                                       Foreground="{StaticResource ConvBrush}" TextAlignment="Center" Margin="0,8,0,0"
+                                       Visibility="{Binding ShowConversion, Converter={StaticResource BoolToVis}}"
+                                       AutomationProperties.AutomationId="AmountsRow"/>
+
+                            <TextBlock Text="{Binding BurnText}" FontSize="16" FontWeight="Bold"
+                                       Foreground="{Binding RingBrush}" TextAlignment="Center" Margin="0,8,0,0"
+                                       AutomationProperties.AutomationId="RatePerMin"/>
+
+                            <TextBlock Text="{Binding RunningLineText}" FontSize="13" FontWeight="SemiBold"
+                                       Foreground="{StaticResource ConvBrush}" TextAlignment="Center" Margin="0,6,0,0"
+                                       Visibility="{Binding ShowEquivalents, Converter={StaticResource BoolToVis}}"/>
+                        </StackPanel>
+
+                        <!-- Управление снизу -->
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" HorizontalAlignment="Center"
+                                    Margin="0,0,0,42">
+                            <Button x:Name="AddButton" Style="{StaticResource IconButton}" Command="{Binding TogglePanelCommand}"
+                                    ToolTip="Участники" AutomationProperties.AutomationId="BtnAddParticipant">
+                                <Grid Width="20" Height="20">
+                                    <Rectangle Width="16" Height="2.4" RadiusX="1.2" RadiusY="1.2"
+                                               Fill="{StaticResource IconFgBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    <Rectangle Width="2.4" Height="16" RadiusX="1.2" RadiusY="1.2"
+                                               Fill="{StaticResource IconFgBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Button>
+
+                            <Button x:Name="PlayButton" Style="{StaticResource PlayButton}" Command="{Binding ToggleRunCommand}"
+                                    Margin="14,0,0,0" AutomationProperties.AutomationId="BtnStart">
+                                <Grid>
+                                    <!-- Play -->
+                                    <Path Data="M8,5.2 L8,18.8 L19,12 Z" Fill="{StaticResource DarkIconBrush}"
+                                          Width="24" Height="24" Stretch="Uniform"
+                                          Visibility="{Binding NotRunning, Converter={StaticResource BoolToVis}}"/>
+                                    <!-- Pause -->
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                Visibility="{Binding IsRunning, Converter={StaticResource BoolToVis}}">
+                                        <Border Width="4" Height="16" CornerRadius="1.3" Background="{StaticResource DarkIconBrush}"/>
+                                        <Border Width="4" Height="16" CornerRadius="1.3" Background="{StaticResource DarkIconBrush}" Margin="4,0,0,0"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Button>
+
+                            <Button x:Name="StopButton" Style="{StaticResource StopButton}" Command="{Binding StopCommand}"
+                                    Margin="14,0,0,0" ToolTip="Стоп"
+                                    Visibility="{Binding ShowStop, Converter={StaticResource BoolToVis}}"
+                                    AutomationProperties.AutomationId="BtnStop">
+                                <Border Width="12" Height="12" CornerRadius="2.5" Background="#fca5a5"/>
+                            </Button>
+                        </StackPanel>
+
+                        <!-- Вехи-тосты (по центру сверху) -->
+                        <ItemsControl ItemsSource="{Binding Toasts}" VerticalAlignment="Top" HorizontalAlignment="Center"
+                                      Margin="0,44,0,0" IsHitTestVisible="False">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:ToastViewModel}">
+                                    <StackPanel HorizontalAlignment="Center" Margin="0,6">
+                                        <Image Source="{Binding Icon, Converter={StaticResource EmojiToImage}}"
+                                               Width="52" Height="52" HorizontalAlignment="Center"/>
+                                        <Border Background="#F214161C" BorderBrush="#21FFFFFF" BorderThickness="1"
+                                                CornerRadius="999" Padding="14,9" Margin="0,8,0,0">
+                                            <TextBlock Text="{Binding Text}" Foreground="#f8fafc" FontWeight="Bold" FontSize="15"/>
+                                        </Border>
+                                        <StackPanel.RenderTransform>
+                                            <ScaleTransform x:Name="ts" ScaleX="0.3" ScaleY="0.3"/>
+                                        </StackPanel.RenderTransform>
+                                        <StackPanel.Triggers>
+                                            <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetName="ts" Storyboard.TargetProperty="ScaleX"
+                                                                         From="0.3" To="1" Duration="0:0:0.45"/>
+                                                        <DoubleAnimation Storyboard.TargetName="ts" Storyboard.TargetProperty="ScaleY"
+                                                                         From="0.3" To="1" Duration="0:0:0.45"/>
+                                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                         From="0" To="1" Duration="0:0:0.3"/>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </EventTrigger>
+                                        </StackPanel.Triggers>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Grid>
+                </Border>
+
+                <!-- КОМПАКТ круг (в 420-координатах 175 → ~105px после масштаба) -->
+                <Border x:Name="CompactBorder" Width="175" Height="175" CornerRadius="88" Background="{StaticResource CircleBg}"
+                        BorderBrush="{Binding RingBrush}" BorderThickness="3" Cursor="Hand"
+                        Visibility="{Binding IsCompact, Converter={StaticResource BoolToVis}}"
+                        MouseLeftButtonDown="Compact_MouseLeftButtonDown"
+                        ToolTip="Развернуть">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="30" ShadowDepth="12" Direction="270" Opacity="0.6" Color="Black"/>
+                    </Border.Effect>
+                    <Grid>
+                        <!-- Тот же огонь, что в большом круге, но масштабирован под 175px (как в дизайне: scale). -->
+                        <Grid.Clip>
+                            <EllipseGeometry Center="87.5,87.5" RadiusX="87.5" RadiusY="87.5"/>
+                        </Grid.Clip>
+                        <ctrl:FireControl Phase="{Binding FirePhase}" Active="{Binding FireActive}" ShowScrim="False"
+                                          Width="420" Height="420" HorizontalAlignment="Left" VerticalAlignment="Top">
+                            <ctrl:FireControl.RenderTransform>
+                                <ScaleTransform ScaleX="0.41667" ScaleY="0.41667"/>
+                            </ctrl:FireControl.RenderTransform>
+                        </ctrl:FireControl>
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <ctrl:Odometer Text="{Binding CompactRubText}" FontFamily="{StaticResource MonoFont}"
+                                           FontWeight="Bold" FontSize="28" Foreground="{StaticResource AmountBrush}"
+                                           HorizontalAlignment="Center"
+                                           AutomationProperties.AutomationId="MiniModeToggle"/>
+                            <ctrl:Odometer Text="{Binding TimeText}" FontFamily="{StaticResource MonoFont}"
+                                           FontSize="17" Foreground="{StaticResource SecondaryBrush}"
+                                           HorizontalAlignment="Center" Margin="0,3,0,0"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- ============ Панель участников ============ -->
+            <Border Width="420" Margin="0,-8,0,0" Padding="20" CornerRadius="24"
+                    Background="#ED111319" BorderBrush="#14FFFFFF" BorderThickness="1"
+                    Visibility="{Binding ShowPanel, Converter={StaticResource BoolToVis}}">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="40" ShadowDepth="14" Direction="270" Opacity="0.45" Color="Black"/>
+                </Border.Effect>
+                <StackPanel>
+                    <Grid Margin="0,0,0,14">
+                        <TextBlock Text="Участники" FontWeight="Bold" FontSize="21"
+                                   Foreground="{StaticResource PanelTitleBrush}" VerticalAlignment="Center"
+                                   AutomationProperties.AutomationId="RolesPanel"/>
+                        <Border HorizontalAlignment="Right" Background="#1F34D399" CornerRadius="999" Padding="12,5">
+                            <TextBlock Text="{Binding HeadcountText}" Foreground="#93c5a3" FontWeight="Bold" FontSize="18"/>
+                        </Border>
+                    </Grid>
+
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="300">
+                        <ItemsControl ItemsSource="{Binding Roles}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:RoleRowViewModel}">
+                                    <Border Background="{Binding RowBackground}" CornerRadius="13" Padding="15,11" Margin="0,0,0,8">
+                                        <Grid>
+                                            <!-- Имя + ставка -->
+                                            <StackPanel VerticalAlignment="Center">
+                                                <!-- Имя -->
+                                                <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="20" Foreground="#e8edf3"
+                                                           Cursor="IBeam" ToolTip="Изменить название"
+                                                           Visibility="{Binding NotEditingName, Converter={StaticResource BoolToVis}}">
+                                                    <TextBlock.InputBindings>
+                                                        <MouseBinding MouseAction="LeftClick" Command="{Binding StartEditNameCommand}"/>
+                                                    </TextBlock.InputBindings>
+                                                </TextBlock>
+                                                <TextBox Text="{Binding EditBuffer, UpdateSourceTrigger=PropertyChanged}"
+                                                         Visibility="{Binding EditingName, Converter={StaticResource BoolToVis}}"
+                                                         Width="180" FontSize="20" FontWeight="Bold"
+                                                         Background="#0DFFFFFF" Foreground="#f1f5f9" BorderBrush="#8034d399" BorderThickness="1"
+                                                         Padding="6,3" IsVisibleChanged="EditBox_IsVisibleChanged"
+                                                         LostKeyboardFocus="RoleEdit_LostFocus" HorizontalAlignment="Left">
+                                                    <TextBox.InputBindings>
+                                                        <KeyBinding Key="Enter" Command="{Binding CommitCommand}"/>
+                                                        <KeyBinding Key="Esc" Command="{Binding CommitCommand}"/>
+                                                    </TextBox.InputBindings>
+                                                </TextBox>
+
+                                                <!-- Ставка -->
+                                                <TextBlock FontSize="17" Foreground="#8a93a3" Cursor="IBeam" Margin="0,3,0,0"
+                                                           ToolTip="Изменить ставку"
+                                                           Visibility="{Binding NotEditingRate, Converter={StaticResource BoolToVis}}">
+                                                    <Run Text="{Binding RateStr, Mode=OneWay}"/><Run Text=" ₽/час"/>
+                                                    <TextBlock.InputBindings>
+                                                        <MouseBinding MouseAction="LeftClick" Command="{Binding StartEditRateCommand}"/>
+                                                    </TextBlock.InputBindings>
+                                                </TextBlock>
+                                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0"
+                                                            Visibility="{Binding EditingRate, Converter={StaticResource BoolToVis}}">
+                                                    <TextBox Text="{Binding EditBuffer, UpdateSourceTrigger=PropertyChanged}"
+                                                             Width="100" FontSize="17"
+                                                             Background="#0DFFFFFF" Foreground="#f1f5f9" BorderBrush="#8034d399" BorderThickness="1"
+                                                             Padding="6,3" IsVisibleChanged="EditBox_IsVisibleChanged"
+                                                             LostKeyboardFocus="RoleEdit_LostFocus">
+                                                        <TextBox.InputBindings>
+                                                            <KeyBinding Key="Enter" Command="{Binding CommitCommand}"/>
+                                                            <KeyBinding Key="Esc" Command="{Binding CommitCommand}"/>
+                                                        </TextBox.InputBindings>
+                                                    </TextBox>
+                                                    <TextBlock Text="₽/час" FontSize="17" Foreground="#8a93a3"
+                                                               VerticalAlignment="Center" Margin="6,0,0,0"/>
+                                                </StackPanel>
+                                            </StackPanel>
+
+                                            <!-- Степпер -->
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                <Button Style="{StaticResource StepperButton}" Content="−" Command="{Binding DecCommand}"/>
+                                                <TextBlock Text="{Binding Count}" MinWidth="26" TextAlignment="Center"
+                                                           FontWeight="Bold" FontSize="21" Foreground="{Binding CountBrush}"
+                                                           VerticalAlignment="Center" Margin="12,0"/>
+                                                <Button Style="{StaticResource StepperButton}" Content="+" Command="{Binding IncCommand}"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+
+                    <!-- Своя роль -->
+                    <Button Style="{StaticResource SecondaryButton}" Content="+ своя роль" Margin="0,12,0,0"
+                            FontSize="19" Command="{Binding ToggleCustomFormCommand}"
+                            Visibility="{Binding NotCustomForm, Converter={StaticResource BoolToVis}}"/>
+                    <Grid Margin="0,12,0,0" Visibility="{Binding CustomFormOpen, Converter={StaticResource BoolToVis}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox Grid.Column="0" Text="{Binding CustomName, UpdateSourceTrigger=PropertyChanged}"
+                                 Background="#0DFFFFFF" Foreground="#f1f5f9" BorderBrush="#1FFFFFFF" BorderThickness="1"
+                                 Padding="12,10" FontSize="18" Tag="Название роли"/>
+                        <TextBox Grid.Column="1" Text="{Binding CustomRate, UpdateSourceTrigger=PropertyChanged}" Margin="8,0,0,0"
+                                 Background="#0DFFFFFF" Foreground="#f1f5f9" BorderBrush="#1FFFFFFF" BorderThickness="1"
+                                 Padding="12,10" FontSize="18" Tag="₽/час"/>
+                        <Button Grid.Column="2" Content="OK" Margin="8,0,0,0" Padding="18,0" Command="{Binding AddCustomCommand}"
+                                Foreground="#06281d" FontWeight="Bold" FontSize="18" Cursor="Hand">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="#34d399" CornerRadius="11">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </Grid>
+</Window>
